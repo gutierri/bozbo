@@ -51,8 +51,3 @@ def app(setup_routers='routes.cfg'):
     for build_action in builder_actions(routers(setup_routers)):
         app.route(build_action[0], build_action[1], build_action[2])
     return app
-
-
-if __name__ == '__main__':
-    app_main = app()
-    app_main.run(host='localhost', port=8080)
