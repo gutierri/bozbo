@@ -11,7 +11,7 @@ def routers(cfg='routes.cfg'):
 
     sections = config.sections()
     sections_props = config.items
-    endpoints = ['/{}'.format(endpoint.replace(':', '/')) 
+    endpoints = ['/{}'.format(endpoint.replace(':', '/'))
                  for endpoint in sections]
 
     props = {endpoints[i]: dict(sections_props(section))
@@ -19,10 +19,11 @@ def routers(cfg='routes.cfg'):
 
     return props
 
+
 def view(resp_data, props=[]):
     fake = faker.Faker()
     resp = {k: getattr(fake, k)() for k in resp_data}
-    if len(props) is 2:
+    if len(props) == 2:
         resp = [{k: getattr(fake, k)() for k in resp_data}
                 for _ in range(0, int(props[1]))]
 
@@ -31,15 +32,18 @@ def view(resp_data, props=[]):
         return json.dumps(resp)
     return _view
 
+
 def builder_actions(r):
-    x = []
-    for k, v in r.items():
+    response_list = []
+    for router_endpoint, router_props in r.items():
         props = []
-        if 'list' in v and 'count' in v:
-            props = [v['list'], v['count']]
-        x.append([k, v['methods'].split('\n'),
-                  view(v['response'].split('\n'), props)])
-    return x
+        if 'list' in router_props and 'count' in router_props:
+            props = [router_props['list'], router_props['count']]
+        response_list.append([router_endpoint,
+                              router_props['methods'].split('\n'),
+                              view(router_props['response'].split('\n'),
+                                   props)])
+    return response_list
 
 
 def app(setup_routers='routes.cfg'):
