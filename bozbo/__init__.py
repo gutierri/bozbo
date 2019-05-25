@@ -27,7 +27,7 @@ def view(resp_data, props=[]):
         resp = [{k: getattr(fake, k)() for k in resp_data}
                 for _ in range(0, int(props[1]))]
 
-    def _view():
+    def _view(*args, **kwargs):
         response.content_type = 'application/json'
         return json.dumps(resp)
     return _view

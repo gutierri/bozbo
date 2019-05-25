@@ -64,10 +64,16 @@ class TestFakeAPI(unittest.TestCase):
         self.assertEqual(app_main.get('/endpoint').json.keys(), ['name'])
 
     def test_function_simple_list_router(self):
-        router03 = ('[endpoint]' '\n'
-                    'methods = get' '\n'
-                    'list = 1' '\n'
-                    'count = 2' '\n'
+        router03 = ('[endpoint]'      '\n'
+                    'methods = get'   '\n'
+                    'list = 1'        '\n'
+                    'count = 2'       '\n'
+                    'response = name' '\n'
+                    '[endpoint:<idx>]' '\n'
+                    'methods = get'   '\n'
+                    'response = name' '\n'
+                    '[endpoint:<idx>:path]' '\n'
+                    'methods = get'   '\n'
                     'response = name' '\n')
         with patch('__builtin__.open', return_value=io.BytesIO(router03)) as _:
             app_ = app()
@@ -77,6 +83,5 @@ class TestFakeAPI(unittest.TestCase):
                          'application/json')
         self.assertEqual(len(app_main.get('/endpoint').json), 2)
 
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(app_main.get('/endpoint/1').status_code, 200)
+        self.assertEqual(app_main.get('/endpoint/1/path').status_code, 200)
