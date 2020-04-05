@@ -1,28 +1,29 @@
 import json
-import ConfigParser
+from configparser import ConfigParser
 
 import faker
 from bottle import Bottle, response
 
 
 def routers(cfg='routes.cfg'):
-    config = ConfigParser.RawConfigParser()
-    config.readfp(open(cfg))
+    config = ConfigParser()
+    config.read_file(open(cfg))
 
     sections = config.sections()
-    sections_props = config.items
-    endpoints = ['/{}'.format(endpoint.replace(':', '/'))
-                 for endpoint in sections]
+    endpoints = ['/{}'.format(section_to_endpoint.replace(':', '/'))
+                 for section_to_endpoint in sections]
 
-    props = {endpoints[i]: dict(sections_props(section))
-             for i, section in enumerate(sections)}
+    map_urls_patterns = {endpoints[i]: dict(config.items(section))
+                         for i, section in enumerate(sections)}
 
-    return props
+    return map_urls_patterns
 
 
 def view(resp_data, props=[]):
     fake = faker.Faker()
+
     resp = {k: getattr(fake, k)() for k in resp_data}
+
     if len(props) == 2:
         resp = [{k: getattr(fake, k)() for k in resp_data}
                 for _ in range(0, int(props[1]))]

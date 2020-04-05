@@ -4,8 +4,6 @@ bozbo
 
 Fast Fake API with simple setup using CFG files.
 
-The tool is in development and is working only in Python 2.7 (TODO).
-
 
 Install and usage
 ===================
@@ -13,7 +11,7 @@ Install bozbo
 
 .. code-block:: bash
 
-    $ pip2 install git+https://github.com/gutierri/bozbo
+    $ pip3 install git+https://github.com/gutierri/bozbo
 
 Create a file routes.cfg with:
 

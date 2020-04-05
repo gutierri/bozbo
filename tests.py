@@ -1,87 +1,106 @@
-#!/usr/bin/env python
 import io
 import unittest
+from unittest.mock import patch
 
 from webtest import TestApp
-from mock import patch
-
 from bozbo import routers, builder_actions, app
 
 
-class TestFakeAPI(unittest.TestCase):
-    def test_builder_routers(self):
-        router01 = ('[events]' '\n'
-                    '[favorites]')
-        with patch('__builtin__.open', return_value=io.BytesIO(router01)) as _:
-            endpoints_01 = routers()
+class TestFakeSetup(unittest.TestCase):
+    @patch('builtins.open')
+    def tests_router_patterns(self, mock_cfg):
+        mock_cfg.return_value = io.StringIO('''[events]
+                                               [favorites]''')
+        router_patterns = routers()
 
-        router02 = ('[events]'      '\n'
-                    '[events:<id>]' '\n'
-                    '[events:<id>:delete]')
-        with patch('__builtin__.open', return_value=io.BytesIO(router02)) as _:
-            endpoints_02 = routers()
+        self.assertCountEqual(['/events', '/favorites'],
+                              router_patterns.keys())
 
-        self.assertEqual(['/events', '/favorites'], endpoints_01.keys())
-        self.assertEqual(['/events', '/events/<id>', '/events/<id>/delete'],
-                         sorted(endpoints_02.keys()))
+    @patch('builtins.open')
+    def test_dynamic_router_patterns(self, mock_cfg):
+        mock_cfg.return_value = io.StringIO('''[events]
+                                               [events:<id>]
+                                               [events:<id>:delete]''')
 
-    def test_props_routers(self):
-        router03 = ('[events]'        '\n'
-                    'methods = post'  '\n'
-                    '          get'   '\n'
-                    '          put'   '\n'
-                    'response = name' '\n'
-                    '        address' '\n')
-        with patch('__builtin__.open', return_value=io.BytesIO(router03)) as _:
-            r = routers()
-        self.assertEqual(['methods', 'response'], r['/events'].keys())
+        router_patterns = routers()
 
-    def test_builder_actions(self):
+        self.assertCountEqual(['/events', '/events/<id>',
+                               '/events/<id>/delete'], router_patterns.keys())
+
+    @patch('builtins.open')
+    def test_props_router(self, mock_cfg):
+        mock_cfg.return_value = io.StringIO('''[events]
+                                               methods = post
+                                                         get
+                                                         put
+
+                                               response = name
+                                                          address''')
+
+        router_patterns = routers()
+
+        self.assertCountEqual(['methods', 'response'],
+                              router_patterns['/events'].keys())
+
+    @patch('builtins.open')
+    def test_builder_router_actions(self, mock_cfg):
         # TODO: tests assert view func
-        router03 = ('[events]'           '\n'
-                    'methods = post'     '\n'
-                    '          get'      '\n'
-                    '          put'      '\n'
-                    'response = name'    '\n'
-                    '           address' '\n')
-        with patch('__builtin__.open', return_value=io.BytesIO(router03)) as _:
-            r = routers()
-        actions = builder_actions(r)
+        mock_cfg.return_value = io.StringIO('''[events]
+                                               methods = post
+                                                         get
+                                                         put
+
+                                               response = name
+                                                          address''')
+
+        router_patterns = routers()
+
+        actions = builder_actions(router_patterns)
+
         self.assertEqual(len(actions[0]), 3)
         self.assertEqual(actions[0][0], '/events')
         self.assertEqual(actions[0][1], ['post', 'get', 'put'])
 
-    def test_function_simple_router(self):
-        router03 = ('[endpoint]'    '\n'
-                    'methods = get' '\n'
-                    'response = name')
-        with patch('__builtin__.open', return_value=io.BytesIO(router03)) as _:
-            app_ = app()
-        app_main = TestApp(app_)
-        self.assertEqual(app_main.get('/endpoint').status_code, 200)
-        self.assertEqual(app_main.get('/endpoint').content_type,
-                         'application/json')
-        self.assertEqual(app_main.get('/endpoint').json.keys(), ['name'])
 
-    def test_function_simple_list_router(self):
-        router03 = ('[endpoint]'      '\n'
-                    'methods = get'   '\n'
-                    'list = 1'        '\n'
-                    'count = 2'       '\n'
-                    'response = name' '\n'
-                    '[endpoint:<idx>]' '\n'
-                    'methods = get'   '\n'
-                    'response = name' '\n'
-                    '[endpoint:<idx>:path]' '\n'
-                    'methods = get'   '\n'
-                    'response = name' '\n')
-        with patch('__builtin__.open', return_value=io.BytesIO(router03)) as _:
-            app_ = app()
-        app_main = TestApp(app_)
-        self.assertEqual(app_main.get('/endpoint').status_code, 200)
-        self.assertEqual(app_main.get('/endpoint').content_type,
-                         'application/json')
-        self.assertEqual(len(app_main.get('/endpoint').json), 2)
+class TestFakeAPI(unittest.TestCase):
+    @patch('builtins.open')
+    def test_function_simple_router(self, mock_cfg):
+        mock_cfg.return_value = io.StringIO('''[endpoint]'
+                                               methods = get
+                                               response = name''')
 
-        self.assertEqual(app_main.get('/endpoint/1').status_code, 200)
-        self.assertEqual(app_main.get('/endpoint/1/path').status_code, 200)
+        api = app()
+
+        resp = TestApp(api).get('/endpoint')
+
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual('application/json', resp.content_type)
+        self.assertCountEqual(['name'], resp.json.keys())
+
+    @patch('builtins.open')
+    def test_function_simple_list_router(self, mock_cfg):
+        mock_cfg.return_value = io.StringIO('''[endpoint]'
+                                               methods=get
+                                               list=1
+                                               count=2
+                                               response=name
+
+                                               [endpoint:<idx>]
+                                               methods=get
+                                               response=name
+
+                                               [endpoint:<idx>:path]
+                                               methods=get
+                                               response=name''')
+
+        api = app()
+
+        client = TestApp(api)
+
+        self.assertEqual(200, client.get('/endpoint').status_code)
+        self.assertEqual('application/json',
+                         client.get('/endpoint').content_type)
+        self.assertEqual(len(client.get('/endpoint').json), 2)
+
+        self.assertEqual(client.get('/endpoint/1').status_code, 200)
+        self.assertEqual(client.get('/endpoint/1/path').status_code, 200)
