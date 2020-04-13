@@ -19,18 +19,30 @@ def routers(cfg='routes.cfg'):
     return map_urls_patterns
 
 
-def view(resp_data, props=[]):
+def dispatch_response(map_expected_response):
     fake = faker.Faker()
+    s = {}
 
-    resp = {k: getattr(fake, k)() for k in resp_data}
+    for field in map_expected_response:
+        if ':' in field:
+            dict_key, fake_attr = field.split(':')
+            s[dict_key] = getattr(fake, fake_attr)()
+            continue
 
+        s[field] = getattr(fake, field)()
+
+    return s
+
+
+def view(resp_data, props=[]):
+    resp = dispatch_response(resp_data)
     if len(props) == 2:
-        resp = [{k: getattr(fake, k)() for k in resp_data}
-                for _ in range(0, int(props[1]))]
+        resp = [resp for _ in range(0, int(props[1]))]
 
     def _view(*args, **kwargs):
         response.content_type = 'application/json'
         return json.dumps(resp)
+
     return _view
 
 

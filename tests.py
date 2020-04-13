@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from webtest import TestApp
-from bozbo import routers, builder_actions, app
+from bozbo import routers, builder_actions, app, dispatch_response
 
 
 class TestFakeSetup(unittest.TestCase):
@@ -61,6 +61,15 @@ class TestFakeSetup(unittest.TestCase):
         self.assertEqual(actions[0][0], '/events')
         self.assertEqual(actions[0][1], ['post', 'get', 'put'])
 
+    def test_split_keys_on_response_with_change_name_json(self):
+        _cfg_simple_expected_response = ['name']
+        simple_resp_json = dispatch_response(_cfg_simple_expected_response)
+
+        _cfg_alias_key_expected_response = ['user_id:name']
+        alias_resp_json = dispatch_response(_cfg_alias_key_expected_response)
+
+        self.assertCountEqual(simple_resp_json, ['name'])
+        self.assertCountEqual(alias_resp_json, ['user_id'])
 
 class TestFakeAPI(unittest.TestCase):
     @patch('builtins.open')
